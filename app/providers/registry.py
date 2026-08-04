@@ -1,5 +1,3 @@
-from typing import type
-
 from app.providers import BaseProvider
 from app.providers.dropbox import DropboxProvider
 from app.providers.google_drive import GoogleDriveProvider
@@ -8,34 +6,30 @@ from app.providers.youtube import YouTubeProvider
 
 
 class ProviderRegistry:
-    _providers: dict[str, type[BaseProvider]] = {}
+    def __init__(self) -> None:
+        self._providers: dict[str, type[BaseProvider]] = {}
 
-    @classmethod
-    def register(cls, provider_class: type[BaseProvider]) -> None:
-        instance = provider_class()
-        cls._providers[instance.name()] = provider_class
+    def register(self, name: str, provider_cls: type[BaseProvider]) -> None:
+        self._providers[name] = provider_cls
 
-    @classmethod
-    def get_provider(cls, name: str) -> BaseProvider | None:
-        provider_class = cls._providers.get(name)
-        if provider_class:
-            return provider_class()
-        return None
+    def get(self, name: str) -> type[BaseProvider] | None:
+        return self._providers.get(name)
 
-    @classmethod
-    def detect_provider(cls, url: str) -> BaseProvider | None:
-        for name, provider_class in cls._providers.items():
-            instance = provider_class()
-            if instance.supports_url(url):
-                return instance
-        return None
+    def get_all(self) -> dict[str, type[BaseProvider]]:
+        return dict(self._providers)
 
-    @classmethod
-    def list_providers(cls) -> list[str]:
-        return list(cls._providers.keys())
+    @property
+    def names(self) -> list[str]:
+        return list(self._providers.keys())
 
 
-ProviderRegistry.register(YouTubeProvider)
-ProviderRegistry.register(GoogleDriveProvider)
-ProviderRegistry.register(DropboxProvider)
-ProviderRegistry.register(TeraBoxProvider)
+def create_default_registry() -> ProviderRegistry:
+    registry = ProviderRegistry()
+    registry.register("dropbox", DropboxProvider)
+    registry.register("google_drive", GoogleDriveProvider)
+    registry.register("terabox", TeraBoxProvider)
+    registry.register("youtube", YouTubeProvider)
+    return registry
+
+
+registry = create_default_registry()
