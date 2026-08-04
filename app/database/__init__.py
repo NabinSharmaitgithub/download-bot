@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
+from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
 
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
@@ -15,6 +16,27 @@ from app.core.logging import get_logger
 logger = get_logger(__name__)
 
 
+def _sanitize_database_url(url: str) -> str:
+    if url.startswith("postgres://"):
+        url = url.replace("postgres://", "postgresql://", 1)
+
+    parsed = urlparse(url)
+    query_params = parse_qs(parsed.query)
+
+    if "sslmode" in query_params:
+        sslmode = query_params.pop("sslmode")[0]
+        if sslmode in ("require", "verify-ca", "verify-full"):
+            query_params["ssl"] = ["require"]
+
+    new_query = urlencode(query_params, doseq=True)
+    url = urlunparse(parsed._replace(query=new_query))
+
+    if not url.startswith("postgresql+asyncpg://"):
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+    return url
+
+
 class Database:
     def __init__(self) -> None:
         self._engine: AsyncEngine | None = None
@@ -22,16 +44,17 @@ class Database:
 
     def initialize(self) -> None:
         settings = get_settings()
+        db_url = _sanitize_database_url(str(settings.database_url))
 
         if settings.is_testing:
             engine = create_async_engine(
-                str(settings.database_url).replace("postgresql", "sqlite+aiosqlite"),
+                db_url.replace("postgresql+asyncpg", "sqlite+aiosqlite"),
                 poolclass=NullPool,
                 echo=settings.debug,
             )
         else:
             engine = create_async_engine(
-                str(settings.database_url),
+                db_url,
                 pool_size=settings.database_pool_size,
                 max_overflow=settings.database_max_overflow,
                 pool_timeout=settings.database_pool_timeout,
