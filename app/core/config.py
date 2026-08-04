@@ -86,9 +86,11 @@ class Settings(BaseSettings):
 
     @field_validator("admin_user_ids", mode="before")
     @classmethod
-    def parse_admin_ids(cls, v: str) -> list[int]:
+    def parse_admin_ids(cls, v) -> list[int]:
         if not v:
             return []
+        if isinstance(v, list):
+            return [int(x) for x in v]
         return [int(x.strip()) for x in v.split(",") if x.strip()]
 
     @field_validator("webhook_url", mode="before")
