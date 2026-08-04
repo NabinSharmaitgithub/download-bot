@@ -2,6 +2,7 @@ import sys
 from logging.config import fileConfig
 from pathlib import Path
 
+import psycopg2
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy import create_engine
@@ -28,6 +29,9 @@ def get_database_url() -> str:
         url = url.replace("postgres://", "postgresql://", 1)
     if url.startswith("postgresql+asyncpg://"):
         url = url.replace("postgresql+asyncpg://", "postgresql://", 1)
+    if "sslmode=" not in url:
+        separator = "&" if "?" in url else "?"
+        url = f"{url}{separator}sslmode=require"
     return url
 
 
@@ -63,6 +67,7 @@ def run_migrations_online() -> None:
     connectable = create_engine(
         url,
         poolclass=pool.NullPool,
+        connect_args={"sslmode": "require"},
     )
 
     with connectable.connect() as connection:
