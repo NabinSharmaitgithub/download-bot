@@ -100,9 +100,9 @@ class DropboxProvider(BaseProvider):
         return url
 
     def _extract_filename(self, content_disposition: str) -> str | None:
-        match = re.search(r'filename[^;=\n]*=(((["' ]).\2?|[^;\n]*)', content_disposition)
+        match = re.search(r'filename[^;=\n]*=((["\']).*?\2|[^;\n]*)', content_disposition)
         if match:
-            filename = match.group(1).strip("\"'\")
+            filename = match.group(1).strip("\'")
             return filename
         return None
 
