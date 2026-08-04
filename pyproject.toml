@@ -14,6 +14,7 @@ dependencies = [
     "structlog>=24.1,<25",
     "sqlalchemy>=2.0,<3",
     "asyncpg>=0.29,<1",
+    "psycopg2-binary>=2.9,<3",
     "aiosqlite>=0.19,<1",
     "alembic>=1.13,<2",
     "python-dotenv>=1.0,<2",
@@ -56,8 +57,11 @@ include = ["app*"]
 [tool.ruff]
 target-version = "py311"
 line-length = 100
-select = ["E", "F", "I", "UP", "W", "C4", "C90", "PL", "RUF", "T20", "PYI", "PTH", "ERA", "PD", "PGH", "SIM", "TID", "TRY", "NPY", "ARG", "FLY", "PERF", "RET", "SLF", "SLOT", "TRY", "INT", "LOG"]
+select = [
+    "E", "F", "I", "UP", "W", "C4", "C90", "PL", "RUF", "T20", "PYI", "PTH", "ERA", "PD", "PGH", "SIM", "TID", "TRY", "NPY", "ARG", "FLY", "PERF", "RET", "SLF", "SLOT", "TRY", "INT", "LOG"
+]
 ignore = ["S101", "S311", "S603", "S607"]
+per-file-ignores = { "tests/*" = ["S101", "S311", "S603", "S607", "PLR2004"], "scripts/*" = ["S101", "S311", "S603", "S607"] }
 exclude = [".venv", ".git", "__pycache__", "build", "dist", ".mypy_cache", ".ruff_cache", "htmlcov", ".pytest_cache"]
 
 [tool.ruff.format]
@@ -70,7 +74,19 @@ line-ending = "lf"
 line-length = 100
 target-version = ["py311"]
 include = '\.pyi?$'
-exclude = '/(\.git|\.venv|__pycache__|\.mypy_cache|\.ruff_cache|build|dist|htmlcov|\.pytest_cache)/'
+exclude = '''
+/(
+  \.git
+  | \.venv
+  | __pycache__
+  | \.mypy_cache
+  | \.ruff_cache
+  | build
+  | dist
+  | htmlcov
+  | \.pytest_cache
+)/
+'''
 
 [tool.isort]
 profile = "black"
@@ -95,7 +111,7 @@ show_error_codes = true
 pretty = true
 namespace_packages = true
 explicit_package_bases = true
-mypy_path = "."
+mpy_path = "."
 
 [[tool.mypy.overrides]]
 module = ["tests.*", "scripts.*"]
@@ -116,9 +132,58 @@ source = ["app"]
 omit = ["tests/*", "scripts/*", "*/__pycache__/*"]
 
 [tool.coverage.report]
-exclude_lines = ["pragma: no cover", "def __repr__", "raise AssertionError", "raise NotImplementedError", "if __name__ == .__main__.:" ]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
 precision = 2
 
 [tool.bandit]
 exclude_dirs = ["tests", "scripts", "__pycache__", ".venv", ".git", "build", "dist"]
 skips = ["B101", "B311", "B603", "B607"]
+
+[tool.detect-secrets]
+exclude-files = [
+    ".*\\.pyc$",
+    ".*\\.pyo$",
+    ".*/__pycache__/.*",
+    ".*\\.git/.*",
+    ".*\\.venv/.*",
+    ".*\\.mypy_cache/.*",
+    ".*\\.ruff_cache/.*",
+    ".*\\.pytest_cache/.*",
+    ".*/htmlcov/.*",
+    ".*/build/.*",
+    ".*/dist/.*",
+    ".*\\.secrets\\.baseline$",
+]
+plugins = [
+    {name = "ArtifactoryDetector", enabled = true},
+    {name = "AWSKeyDetector", enabled = true},
+    {name = "AzureStorageKeyDetector", enabled = true},
+    {name = "BasicAuthDetector", enabled = true},
+    {name = "CloudantDetector", enabled = true},
+    {name = "DiscordBotTokenDetector", enabled = true},
+    {name = "GitHubTokenDetector", enabled = true},
+    {name = "GitLabTokenDetector", enabled = true},
+    {name = "HerokuApiKeyDetector", enabled = true},
+    {name = "IbmCloudApiKeyDetector", enabled = true},
+    {name = "IbmCosHmacDetector", enabled = true},
+    {name = "JwtTokenDetector", enabled = true},
+    {name = "JiraApiTokenDetector", enabled = true},
+    {name = "MailchimpApiKeyDetector", enabled = true},
+    {name = "NpmDetector", enabled = true},
+    {name = "OpenAiApiKeyDetector", enabled = true},
+    {name = "PrivateKeyDetector", enabled = true},
+    {name = "PypiTokenDetector", enabled = true},
+    {name = "SendGridApiKeyDetector", enabled = true},
+    {name = "SlackDetector", enabled = true},
+    {name = "SoftlayerDetector", enabled = true},
+    {name = "SquareOAuthDetector", enabled = true},
+    {name = "StripeDetector", enabled = true},
+    {name = "TelegramBotTokenDetector", enabled = true},
+    {name = "TwilioApiKeyDetector", enabled = true},
+]
