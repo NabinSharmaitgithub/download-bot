@@ -16,7 +16,7 @@ from app.core.logging import get_logger
 logger = get_logger(__name__)
 
 
-def _sanitize_database_url(url: str) -> tuple[str, str | None]:
+def _sanitize_database_url(url: str) -> tuple[str, bool]:
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)
 
@@ -24,6 +24,7 @@ def _sanitize_database_url(url: str) -> tuple[str, str | None]:
     query_params = parse_qs(parsed.query)
 
     sslmode = query_params.pop("sslmode", [None])[0]
+    needs_ssl = sslmode in ("require", "verify-ca", "verify-full")
 
     new_query = urlencode(query_params, doseq=True)
     url = urlunparse(parsed._replace(query=new_query))
@@ -31,7 +32,7 @@ def _sanitize_database_url(url: str) -> tuple[str, str | None]:
     if not url.startswith("postgresql+asyncpg://"):
         url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-    return url, sslmode
+    return url, needs_ssl
 
 
 class Database:
@@ -41,11 +42,10 @@ class Database:
 
     def initialize(self) -> None:
         settings = get_settings()
-        db_url, sslmode = _sanitize_database_url(str(settings.database_url))
+        db_url, needs_ssl = _sanitize_database_url(str(settings.database_url))
 
         connect_args = {}
-
-        if sslmode in ("require", "verify-ca", "verify-full"):
+        if needs_ssl:
             connect_args["ssl"] = True
 
         if settings.is_testing:
