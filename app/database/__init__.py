@@ -1,3 +1,4 @@
+import ssl
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
@@ -16,17 +17,14 @@ from app.core.logging import get_logger
 logger = get_logger(__name__)
 
 
-def _sanitize_database_url(url: str) -> str:
+def _sanitize_database_url(url: str) -> tuple[str, str | None]:
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)
 
     parsed = urlparse(url)
     query_params = parse_qs(parsed.query)
 
-    if "sslmode" in query_params:
-        sslmode = query_params.pop("sslmode")[0]
-        if sslmode in ("require", "verify-ca", "verify-full"):
-            query_params["ssl"] = ["require"]
+    sslmode = query_params.pop("sslmode", [None])[0]
 
     new_query = urlencode(query_params, doseq=True)
     url = urlunparse(parsed._replace(query=new_query))
@@ -34,7 +32,7 @@ def _sanitize_database_url(url: str) -> str:
     if not url.startswith("postgresql+asyncpg://"):
         url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
 
-    return url
+    return url, sslmode
 
 
 class Database:
@@ -44,7 +42,15 @@ class Database:
 
     def initialize(self) -> None:
         settings = get_settings()
-        db_url = _sanitize_database_url(str(settings.database_url))
+        db_url, sslmode = _sanitize_database_url(str(settings.database_url))
+
+        connect_args = {}
+
+        if sslmode in ("require", "verify-ca", "verify-full"):
+            ssl_ctx = ssl.create_default_context()
+            ssl_ctx.check_hostname = False
+            ssl_ctx.verify_mode = ssl.CERT_NONE
+            connect_args["ssl"] = ssl_ctx
 
         if settings.is_testing:
             engine = create_async_engine(
@@ -60,6 +66,7 @@ class Database:
                 pool_timeout=settings.database_pool_timeout,
                 pool_recycle=settings.database_pool_recycle,
                 echo=settings.debug,
+                connect_args=connect_args,
             )
 
         self._engine = engine
