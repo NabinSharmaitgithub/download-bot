@@ -66,7 +66,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        connection.run_sync(do_run_migrations)
+        do_run_migrations(connection)
 
     connectable.dispose()
 
