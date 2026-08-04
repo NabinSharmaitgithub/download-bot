@@ -1,5 +1,4 @@
 import asyncio
-import ssl
 import sys
 from logging.config import fileConfig
 from pathlib import Path
@@ -24,7 +23,7 @@ if config.config_file_name is not None:
 target_metadata = Base.metadata
 
 
-def get_database_url() -> str:
+def get_database_url() -> tuple[str, str | None]:
     settings = get_settings()
     url = str(settings.database_url)
     if url.startswith("postgres://"):
@@ -76,10 +75,7 @@ async def run_async_migrations() -> None:
 
     connect_args = {}
     if sslmode in ("require", "verify-ca", "verify-full"):
-        ssl_ctx = ssl.create_default_context()
-        ssl_ctx.check_hostname = False
-        ssl_ctx.verify_mode = ssl.CERT_NONE
-        connect_args["ssl"] = ssl_ctx
+        connect_args["ssl"] = True
 
     connectable = create_async_engine(
         url,

@@ -1,4 +1,3 @@
-import ssl
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 from urllib.parse import parse_qs, urlencode, urlparse, urlunparse
@@ -47,10 +46,7 @@ class Database:
         connect_args = {}
 
         if sslmode in ("require", "verify-ca", "verify-full"):
-            ssl_ctx = ssl.create_default_context()
-            ssl_ctx.check_hostname = False
-            ssl_ctx.verify_mode = ssl.CERT_NONE
-            connect_args["ssl"] = ssl_ctx
+            connect_args["ssl"] = True
 
         if settings.is_testing:
             engine = create_async_engine(
