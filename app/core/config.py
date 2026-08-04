@@ -77,7 +77,7 @@ class Settings(BaseSettings):
     cleanup_interval: int = Field(default=3600, validation_alias="CLEANUP_INTERVAL")
     temp_file_ttl: int = Field(default=86400, validation_alias="TEMP_FILE_TTL")
 
-    admin_user_ids: str = Field(default="", validation_alias="ADMIN_USER_IDS")
+    admin_user_ids: list[int] = Field(default=[], validation_alias="ADMIN_USER_IDS")
 
     secret_key: str = Field(
         validation_alias="SECRET_KEY",
@@ -91,7 +91,9 @@ class Settings(BaseSettings):
             return []
         if isinstance(v, list):
             return [int(x) for x in v]
-        return [int(x.strip()) for x in v.split(",") if x.strip()]
+        if isinstance(v, str):
+            return [int(x.strip()) for x in v.split(",") if x.strip()]
+        return []
 
     @field_validator("webhook_url", mode="before")
     @classmethod
@@ -114,7 +116,7 @@ class Settings(BaseSettings):
 
     @property
     def admin_ids(self) -> list[int]:
-        return self.parse_admin_ids(self.admin_user_ids)
+        return self.admin_user_ids
 
 
 @lru_cache
