@@ -201,7 +201,7 @@ class AdminLog(Base, TimestampMixin):
     )
     action: Mapped[str] = mapped_column(String(100), nullable=False)
     target_user_id: Mapped[Optional[int]] = mapped_column(BigInteger, nullable=True)
-    metadata: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    extra_data: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     __table_args__ = (
         Index("ix_admin_logs_admin_created", "admin_id", "created_at"),
