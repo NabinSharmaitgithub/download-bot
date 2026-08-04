@@ -1,0 +1,135 @@
+services:
+  - type: web
+    name: download-bot-api
+    runtime: python
+    plan: starter
+    region: oregon
+    buildCommand: pip install -e . && alembic upgrade head
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: LOG_FORMAT
+        value: json
+      - key: FASTAPI_HOST
+        value: 0.0.0.0
+      - key: FASTAPI_PORT
+        value: 8000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: download-bot-db
+          property: connectionString
+      - key: DATABASE_POOL_SIZE
+        value: "10"
+      - key: DATABASE_MAX_OVERFLOW
+        value: "20"
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: download-bot-redis
+          property: connectionString
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: BOT_MODE
+        value: webhook
+      - key: WEBHOOK_URL
+        sync: false
+      - key: WEBHOOK_PATH
+        value: /webhook
+      - key: WEBHOOK_SECRET
+        sync: false
+      - key: TG_MAX_UPLOAD_SIZE
+        value: "52428800"
+      - key: DOWNLOAD_DIRECTORY
+        value: /data/downloads
+      - key: TEMP_DIRECTORY
+        value: /tmp/downloads
+      - key: DOWNLOAD_LINK_EXPIRATION
+        value: "3600"
+      - key: DOWNLOAD_LINK_HMAC_SECRET
+        sync: false
+      - key: MAX_CONCURRENT_DOWNLOADS
+        value: "3"
+      - key: MAX_QUEUE_SIZE
+        value: "100"
+      - key: CLEANUP_INTERVAL
+        value: "3600"
+      - key: TEMP_FILE_TTL
+        value: "86400"
+      - key: ADMIN_USER_IDS
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+    scaling:
+      minInstances: 1
+      maxInstances: 3
+  - type: worker
+    name: download-bot-worker
+    runtime: python
+    plan: starter
+    region: oregon
+    buildCommand: pip install -e .
+    startCommand: python -m app.bot
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: LOG_FORMAT
+        value: json
+      - key: DATABASE_URL
+        fromDatabase:
+          name: download-bot-db
+          property: connectionString
+      - key: DATABASE_POOL_SIZE
+        value: "10"
+      - key: DATABASE_MAX_OVERFLOW
+        value: "20"
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: download-bot-redis
+          property: connectionString
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: BOT_MODE
+        value: polling
+      - key: TG_MAX_UPLOAD_SIZE
+        value: "52428800"
+      - key: DOWNLOAD_DIRECTORY
+        value: /data/downloads
+      - key: TEMP_DIRECTORY
+        value: /tmp/downloads
+      - key: DOWNLOAD_LINK_EXPIRATION
+        value: "3600"
+      - key: DOWNLOAD_LINK_HMAC_SECRET
+        sync: false
+      - key: MAX_CONCURRENT_DOWNLOADS
+        value: "3"
+      - key: MAX_QUEUE_SIZE
+        value: "100"
+      - key: CLEANUP_INTERVAL
+        value: "3600"
+      - key: TEMP_FILE_TTL
+        value: "86400"
+      - key: ADMIN_USER_IDS
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+databases:
+  - name: download-bot-db
+    databaseName: download_bot
+    user: download_bot
+    plan: starter
+    region: oregon
+    version: 16
+    ipAllowList: []
+redis:
+  - name: download-bot-redis
+    plan: starter
+    region: oregon
+    version: 7
+    maxmemoryPolicy: allkeys-lru
